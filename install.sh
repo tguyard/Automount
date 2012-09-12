@@ -43,12 +43,11 @@ end
 
 -- this function is used to add the widget. You will want to customize it
 function addDDWidget (widgets)
-    left_widgets=1
     right_widgets=2
     dd_widgets=5
 
-    table.insert(widgets, #widgets, awful.widget.layout.horizontal.rightleft)
     mywibox[default_screen].widgets[right_widgets][dd_widgets] = widgets
+    mywibox[default_screen].widgets[right_widgets][dd_widgets].layout = awful.widget.layout.horizontal.rightleft
 end
 
 -- You also have to add this lines (launch the scripts on startup)

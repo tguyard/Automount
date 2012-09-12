@@ -90,7 +90,7 @@ while read line ; do
     else
         echo -n "${WIDGETS[@]} separator, "
     fi
-
+        echo " })"
     ) >> $AWSOME_COMMANDS
     cat $AWSOME_COMMANDS | awesome-client
 
