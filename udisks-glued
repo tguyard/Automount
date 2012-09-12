@@ -1,0 +1,25 @@
+#! /bin/sh
+
+DESC="Udisks glue as a demon"
+NAME=udisks-glued
+DAEMON=$(which udisks-glue)
+SCRIPTNAME=$NAME
+
+case "$1" in
+  start)
+	  if [ $(ps -fe | grep "$DAEMON" | wc -l) -gt 1 ] ; then
+		  echo already started. Ingnoring
+		  exit 1
+	  fi
+      sleep 5
+	  nohup $DAEMON > /dev/null &
+	;;
+  stop)
+	  killall $(basename $DAEMON)
+	;;
+  *)
+	echo "Usage: $SCRIPTNAME {start|stop}" >&2
+	exit 3
+	;;
+esac
+

@@ -1,0 +1,97 @@
+#!/bin/bash
+
+PIPE=$HOME/.config/awesome/automount/pipe
+DEVICES=()
+# if hda1 is existing then $hda1 should contain the device state
+
+#
+# The command line can take 4 "commands"
+# plug /dev/sd..
+# unplug /dev/sd..
+# mount /dev/sd.. /media/file
+# unmount /dev/hd..
+#
+
+
+# exit  if there is already one launched.
+if [ $(ps -C "$(basename $0)" | wc -l) -gt 3 ] ; then
+    echo "exit (Found an other instance)"
+    exit 1
+fi
+
+
+# create the fifo if not existing
+if [ ! -p "$PIPE" ] ; then
+    if [ -e "$PIPE" ] ; then rm "$PIPE" ; fi
+    mkfifo "$PIPE"
+fi
+
+tail -f "$PIPE" | \
+while read line ; do
+    echo $line
+    set -- $line
+    COMMAND=$1
+    DEV=$(echo $2 | cut -d "/" -f 3)
+    MOUNT_POINT=$(echo $3 | cut -d "/" -f 3)
+
+    echo "$COMMAND $DEV $MOUNT_POINT"
+
+    #
+    # Update the DEVICE array
+    #
+
+    if [ "$COMMAND" = "plug" ] ; then
+        # Assuming the dev is not already in the array.
+        # add $DEV to list
+        DEVICES[${#DEVICES[@]}]=$DEV
+
+    elif [ "$COMMAND" = "unplug" ] ; then
+        # remove $DEV from list.
+        i=0
+        while [ "$i" -lt "${#DEVICES[@]}" ] && [ "${DEVICES[i]}" != "$DEV" ] ; do
+            i=$[ $i + 1 ]
+        done
+        DEVICES[$i]=
+        DEVICES=(${DEVICES[@]})
+        DEV=
+
+    elif [ "$COMMAND" = "mount" ] ; then
+        eval ${DEV}=$MOUNT_POINT
+
+    elif [ "$COMMAND" = "umount" ] ; then
+        eval ${DEV}=
+
+    fi
+
+
+    #
+    # realy make the work
+    #
+
+    AWSOME_COMMANDS=/tmp/awesome-commands
+    WIDGETS=()
+    echo -n "" > $AWSOME_COMMANDS
+
+    (
+
+    for index in $(seq 0 $[ ${#DEVICES[@]} - 1 ]) ; do
+        device=${DEVICES[index]}
+        widget="dd_$index"
+        mounted=${!device}
+        WIDGETS[${#WIDGETS[@]}]="$widget,"
+
+        echo "$widget = createDDWidget(\"$device\", \"$mounted\")"
+
+    done
+
+    echo -n "addDDWidget ({ "
+    if [ ${#WIDGETS[@]} -eq 0 ] ; then
+        echo -n "${WIDGETS[@]} "
+    else
+        echo -n "${WIDGETS[@]} separator, "
+    fi
+
+    ) >> $AWSOME_COMMANDS
+    cat $AWSOME_COMMANDS | awesome-client
+
+done
